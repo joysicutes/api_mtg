@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SpellBinders Cards</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+</head>
+
+<body style="background-color:#111827; color:#f3f4f6;">
+
+    <div class="container-fluid sticky-top" style="background-color:#552293; padding: 0.5rem 1rem;">
+        <div class="row align-items-center">
+            <div class="col-6 col-md-3">
+                <img src="assets/images/mtg_logo.png" style="width:60px; height:50px; filter: drop-shadow(0 0 5px #ffc107);">
+            </div>
+            <div class="col-6 col-md-9 d-flex justify-content-end gap-3">
+                <a href="index.html" class="text-decoration-none text-light" style="font-size: 16px;">Home</a>
+                <a href="cards.html" class="text-decoration-none text-light" style="font-size: 16px; border-bottom: 3px solid #ffc107;">Cards</a>
+                <a href="sets.html" class="text-decoration-none text-light" style="font-size: 16px;">Sets</a>
+                <a href="about.html" class="text-decoration-none text-light" style="font-size: 16px;">About</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <select id="typeFilter" class="form-select form-select-sm w-auto" style="background-color: #cb9eff;">
+                    <option value="">All Types</option>
+                    <option value="Creature">Creature</option>
+                    <option value="Instant">Instant</option>
+                    <option value="Sorcery">Sorcery</option>
+                    <option value="Artifact">Artifact</option>
+                    <option value="Enchantment">Enchantment</option>
+                    <option value="Planeswalker">Planeswalker</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by name">
+            </div>
+            <div class="col-md-4 d-flex justify-content-end gap-2">
+                <button class="btn btn-sm" style="background-color: #cb9eff;" onclick="prevPage()">Previous</button>
+                <span id="pageText" class="align-self-center">Page 1</span>
+                <button class="btn btn-sm" style="background-color: #cb9eff;" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-3">
+        <div class="row" id="contentArea"></div>
+    </div>
+
+    <script>
+        const contentArea = document.getElementById("contentArea");
+        const pageText = document.getElementById("pageText");
+        const typeFilterDropdown = document.getElementById("typeFilter");
+        const searchInput = document.getElementById("searchInput");
+
+        let page = 1;
+        let typeFilter = '';
+        let searchQuery = '';
+
+        typeFilterDropdown.addEventListener('change', () => {
+            typeFilter = typeFilterDropdown.value;
+            page = 1;
+            getCards();
+        });
+
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value.trim();
+            page = 1;
+            getCards();
+        });
+
+        async function getCards() {
+            contentArea.innerHTML = `
+        <div class="text-center text-secondary py-5">
+          Loading cards...
+        </div>
+      `;
+            pageText.textContent = `Page ${page}`;
+
+            let url = `https://api.magicthegathering.io/v1/cards?page=${page}&pageSize=50`;
+            if (typeFilter) url += `&type=${encodeURIComponent(typeFilter)}`;
+            if (searchQuery) url += `&name=${encodeURIComponent(searchQuery)}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const cards = data.cards || [];
+
+                const uniqueCards = [];
+                const seenNames = new Set();
+                cards.forEach(card => {
+                    if (card.name && !seenNames.has(card.name)) {
+                        seenNames.add(card.name);
+                        uniqueCards.push(card);
+                    }
+                });
+
+                const pageCards = uniqueCards.slice(0, 12);
+                contentArea.innerHTML = '';
+
+                if (pageCards.length === 0) {
+                    contentArea.innerHTML = `
+            <div class="text-center text-warning py-5">
+              No cards found.
+            </div>
+          `;
+                    return;
+                }
+
+                pageCards.forEach((card, index) => {
+                    const name = card.name || 'Unknown';
+                    const type = card.type || 'Unknown';
+                    const mana = card.manaCost || 'N/A';
+                    const image = card.imageUrl || 'https://via.placeholder.com/223x310?text=No+Image';
+                    const rarity = card.rarity || 'N/A';
+                    const set = card.set || 'N/A';
+                    const text = card.text || 'No text';
+
+                    contentArea.innerHTML += `
+            <div class="col-12 col-md-6 col-lg-4">
+              <div class="card my-3 shadow-lg border-0" style="background-color:#18082b; color:#e6d2ff; border-radius:1rem; overflow:hidden;">
+                
+                <div class="position-relative">
+                  <img src="${image}" class="card-img-top" style="width:100%; height:500px; object-fit:contain; background-color:#18082b;"
+                       onerror="this.onerror=null;this.src='https://via.placeholder.com/223x310?text=No+Image';">
+                  <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.2);"></div>
+                </div>
+
+                <div class="card-body text-center p-3">
+                  <h5 class="card-title fw-bold">${name}</h5>
+                  <p class="mb-1 text-warning fst-italic">${type}</p>
+                  <p class="mb-1"><strong>Rarity:</strong> ${rarity}</p>
+                  <p class="mb-1"><strong>Set:</strong> ${set}</p>
+                  <p class="mb-0"><strong>Mana:</strong>${mana}</p>
+                </div>
+              </div>
+            </div>
+          `;
+                });
+
+            } catch (error) {
+                contentArea.innerHTML = `
+          <div class="text-center text-danger py-5">
+            Failed to load cards.
+          </div>
+        `;
+                console.error(error);
+            }
+        }
+
+        function nextPage() {
+            page++;
+            getCards();
+        }
+
+        function prevPage() {
+            if (page > 1) page--;
+            getCards();
+        }
+
+        getCards();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
+</body>
+
+</html>
