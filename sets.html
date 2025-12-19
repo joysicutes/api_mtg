@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SpellBinders Sets</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+</head>
+
+<body style="background-color:#111827; color:#f3f4f6;">
+
+    <div class="container-fluid sticky-top" style="background-color:#552293; padding:0.5rem 1rem;">
+        <div class="row align-items-center">
+            <div class="col-6 col-md-3">
+                <a href="index.html"><img src="assets/images/mtg_logo.png" style="width:60px; height:50px; filter: drop-shadow(0 0 5px #ffc107);"></a>
+            </div>
+            <div class="col-6 col-md-9 d-flex justify-content-end gap-3">
+                <a href="index.html" class="text-decoration-none text-light" style="font-size:16px;">Home</a>
+                <a href="cards.html" class="text-decoration-none text-light" style="font-size:16px;">Cards</a>
+                <a href="sets.html" class="text-decoration-none text-light"
+                    style="font-size:16px; border-bottom:3px solid #ffc107;">Sets</a>
+                <a href="about.html" class="text-decoration-none text-light" style="font-size:16px;">About</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <select id="typeFilter" class="form-select form-select-sm"
+                    style="background-color:#cb9eff; color:#111827;">
+                    <option value="">All Types</option>
+                    <option value="expansion">Expansion</option>
+                    <option value="core">Core</option>
+                    <option value="promo">Promo</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control form-control-sm"
+                    placeholder="Search sets by name" style="background-color:#f3f4f6; color:#111827;">
+            </div>
+
+            <div class="col-md-4 d-flex justify-content-end gap-2">
+                <button class="btn btn-sm btn-warning" onclick="prevPage()">Previous</button>
+                <span id="pageText" class="align-self-center">Page 1</span>
+                <button class="btn btn-sm btn-warning" onclick="nextPage()">Next</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-3">
+        <div id="contentArea"></div>
+    </div>
+
+    <script>
+        const contentArea = document.getElementById("contentArea");
+        const searchInput = document.getElementById("searchInput");
+        const typeFilterDropdown = document.getElementById("typeFilter");
+        const pageText = document.getElementById("pageText");
+
+        let searchQuery = '';
+        let typeFilter = '';
+        let page = 1;
+        const pageSize = 10;
+
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value.trim().toLowerCase();
+            page = 1;
+            getSets();
+        });
+
+        typeFilterDropdown.addEventListener('change', () => {
+            typeFilter = typeFilterDropdown.value;
+            page = 1;
+            getSets();
+        });
+
+        async function getSets() {
+            contentArea.innerHTML = `<div class="text-center text-secondary py-5">Loading sets...</div>`;
+            try {
+                const response = await fetch('https://api.magicthegathering.io/v1/sets');
+                const data = await response.json();
+                let sets = data.sets || [];
+
+                if (searchQuery) sets = sets.filter(s => s.name.toLowerCase().includes(searchQuery));
+                if (typeFilter) sets = sets.filter(s => s.type.toLowerCase() === typeFilter.toLowerCase());
+
+                const start = (page - 1) * pageSize;
+                const pagedSets = sets.slice(start, start + pageSize);
+
+                contentArea.innerHTML = '';
+                if (pagedSets.length === 0) {
+                    contentArea.innerHTML = `<div class="text-center text-warning py-5">No sets found.</div>`;
+                    return;
+                }
+
+                pagedSets.forEach((set, index) => {
+                    const name = set.name || 'Unknown';
+                    const code = set.code || 'N/A';
+                    const type = set.type || 'N/A';
+                    const block = set.block || 'N/A';
+                    const releaseDate = set.releaseDate || 'N/A';
+                    const border = set.border || 'N/A';
+                    const mkm_name = set.mkm_name || 'N/A';
+                    const magicCardsInfoCode = set.magicCardsInfoCode || 'N/A';
+                    const onlineOnly = set.onlineOnly ? 'Yes' : 'No';
+                    const booster = set.booster || [];
+
+                    const boosterHTML = booster.map(item => {
+                        if (Array.isArray(item)) return item.map(sub => `<span style="display:inline-block;background:#552293;color:#ffc107;padding:2px 6px;margin:2px;border-radius:4px;font-size:0.75rem;">${sub}</span>`).join('');
+                        return `<span style="display:inline-block;background:#552293;color:#ffc107;padding:2px 6px;margin:2px;border-radius:4px;font-size:0.75rem;">${item}</span>`;
+                    }).join('');
+
+                    contentArea.innerHTML += `
+                    <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="card shadow-lg border-0" style="background-color:#18082b; color:#e6d2ff; border-radius:1rem; overflow:hidden;">
+                        <div class="card-body p-2 d-flex flex-column flex-lg-row justify-content-between align-items-start">
+                            <div>
+                            <h6 class="card-title fw-bold mb-1">${name}</h6>
+                            <p class="mb-0 text-warning">Code: ${code}</p>
+                            <p class="mb-0">Type: ${type}</p>
+                            <p class="mb-0">Block: ${block}</p>
+                            <p class="mb-0">Release Date: ${releaseDate}</p>
+                            </div>
+                            <div class="mt-2 mt-lg-0">
+                            <button class="btn btn-sm btn-warning" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSet${index}" aria-expanded="false" aria-controls="collapseSet${index}">
+                                Show Details
+                            </button>
+                            <div class="collapse mt-2" id="collapseSet${index}">
+                                <div style="background-color:#1f1f2a; color:#e6d2ff; text-align:justify; font-size:0.9rem; padding:5px;">
+                                <p><strong>Border:</strong> ${border}</p>
+                                <p><strong>Online Only:</strong> ${onlineOnly}</p>
+                                <p><strong>MKM Name:</strong> ${mkm_name}</p>
+                                <p><strong>MagicCardsInfo Code:</strong> ${magicCardsInfoCode}</p>
+                                <p><strong>Booster:</strong><br>${boosterHTML}</p>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    </div>`;
+                });
+            } catch (error) {
+                contentArea.innerHTML = `<div class="text-center text-danger py-5">Failed to load sets.</div>`;
+                console.error(error);
+            }
+        }
+
+        function prevPage() {
+            if (page > 1) {
+                page--;
+                pageText.textContent = `Page ${page}`;
+                getSets();
+            }
+        }
+
+        function nextPage() {
+            page++;
+            pageText.textContent = `Page ${page}`;
+            getSets();
+        }
+
+        getSets();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
+</body>
+
+</html>
